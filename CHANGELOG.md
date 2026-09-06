@@ -2,6 +2,11 @@
 
 All notable changes to `/watch` are documented here.
 
+## [Unreleased]
+
+### Added
+- **`WATCH_SUB_LANGS` / `--sub-langs`** — choose which caption languages yt-dlp requests (comma-separated patterns, e.g. `ko.*,en.*`). The default stays `en.*`; before this the English-only pattern was hardcoded, so non-English videos silently skipped the free caption path and required a Whisper key. `all` is rejected to keep the request bounded. Subtitle file selection follows the configured language order.
+
 ## [0.2.0] — 2026-06-29
 
 ### Added
