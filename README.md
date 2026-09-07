@@ -204,6 +204,7 @@ Other knobs (passed to `scripts/watch.py`):
 
 - **Long-video accuracy depends on the detail mode.** On the capped modes (`efficient`, default `balanced`) coverage thins out past ~10 minutes — the frame cap spreads across the whole clip, so the script prints a "sparse scan" warning and you're better off re-running focused with `--start`/`--end`. `token-burner` lifts the cap and keeps *every* scene-change frame across the full video, so it stays complete on longer clips at the cost of more image tokens. The 10-minute mark is guidance for the capped modes, not a hard ceiling.
 - **Detail is one dial.** Defaults are balanced: scene-aware frames, 2 fps max, 100-frame cap. Use `--detail efficient` for a fast 50-frame keyframe pass, or `--detail token-burner` for uncapped scene candidates. Set `WATCH_DETAIL` in `~/.config/watch/.env` to change the default.
+- **Captions are English-only by default.** For other languages set `WATCH_SUB_LANGS=ko.*,en.*` in `~/.config/watch/.env` (or pass `--sub-langs`) so yt-dlp pulls the native track and Whisper is not needed. `all` is rejected — it downloads hundreds of auto-translated tracks.
 
 ## Structure
 

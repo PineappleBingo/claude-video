@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
+from config import get_config
+
 
 VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi", ".flv", ".wmv"}
 
@@ -41,15 +43,30 @@ def resolve_local(path: str) -> dict:
     }
 
 
-def _pick_subtitle(out_dir: Path) -> Path | None:
+def _lang_prefixes(sub_langs: str) -> list[str]:
+    """'ko.*,en-US,en.*' → ['ko', 'en-US', 'en'] — the order is the preference."""
+    out: list[str] = []
+    for token in sub_langs.split(","):
+        prefix = token.strip().split(".", 1)[0].rstrip("*").strip("-")
+        if prefix and prefix not in out:
+            out.append(prefix)
+    return out
+
+
+def _pick_subtitle(out_dir: Path, sub_langs: str | None = None) -> Path | None:
+    """Prefer subtitle files in the configured language order, then anything."""
     candidates = sorted(out_dir.glob("video*.vtt"))
     if not candidates:
         return None
-    preferred = [
-        c for c in candidates
-        if any(marker in c.name for marker in (".en.", ".en-US.", ".en-GB.", ".en-orig."))
-    ]
-    return preferred[0] if preferred else candidates[0]
+    langs = sub_langs if sub_langs is not None else str(get_config()["sub_langs"])
+    for prefix in _lang_prefixes(langs):
+        preferred = [
+            c for c in candidates
+            if f".{prefix}." in c.name or f".{prefix}-" in c.name
+        ]
+        if preferred:
+            return preferred[0]
+    return candidates[0]
 
 
 def _pick_video(out_dir: Path) -> Path | None:
@@ -62,11 +79,12 @@ def _pick_video(out_dir: Path) -> Path | None:
     return None
 
 
-def fetch_captions(url: str, out_dir: Path) -> dict:
+def fetch_captions(url: str, out_dir: Path, sub_langs: str | None = None) -> dict:
     """Fetch metadata and best available VTT captions without downloading video."""
     if shutil.which("yt-dlp") is None:
         raise SystemExit("yt-dlp is not installed. Install with: brew install yt-dlp")
 
+    langs = sub_langs if sub_langs is not None else str(get_config()["sub_langs"])
     out_dir.mkdir(parents=True, exist_ok=True)
     output_template = str(out_dir / "video.%(ext)s")
     cmd = [
@@ -75,7 +93,7 @@ def fetch_captions(url: str, out_dir: Path) -> dict:
         "--write-info-json",
         "--write-subs",
         "--write-auto-subs",
-        "--sub-langs", "en.*",
+        "--sub-langs", langs,
         "--sub-format", "vtt",
         "--convert-subs", "vtt",
         "--no-playlist",
@@ -85,7 +103,7 @@ def fetch_captions(url: str, out_dir: Path) -> dict:
         url,
     ]
     subprocess.run(cmd, stdout=sys.stderr, stderr=sys.stderr)
-    subtitle = _pick_subtitle(out_dir)
+    subtitle = _pick_subtitle(out_dir, langs)
     info = _read_info(out_dir / "video.info.json", url)
     return {
         "video_path": None,
@@ -116,10 +134,12 @@ def download_url(
     url: str,
     out_dir: Path,
     audio_only: bool = False,
+    sub_langs: str | None = None,
 ) -> dict:
     if shutil.which("yt-dlp") is None:
         raise SystemExit("yt-dlp is not installed. Install with: brew install yt-dlp")
 
+    langs = sub_langs if sub_langs is not None else str(get_config()["sub_langs"])
     out_dir.mkdir(parents=True, exist_ok=True)
     output_template = str(out_dir / "video.%(ext)s")
 
@@ -132,7 +152,7 @@ def download_url(
         "--write-info-json",
         "--write-subs",
         "--write-auto-subs",
-        "--sub-langs", "en.*",
+        "--sub-langs", langs,
         "--sub-format", "vtt",
         "--convert-subs", "vtt",
         "--no-playlist",
@@ -151,7 +171,7 @@ def download_url(
             f"yt-dlp did not produce a video file in {out_dir} (exit {result.returncode})"
         )
 
-    subtitle = _pick_subtitle(out_dir)
+    subtitle = _pick_subtitle(out_dir, langs)
     info = _read_info(out_dir / "video.info.json", url)
 
     return {
@@ -166,9 +186,10 @@ def download(
     source: str,
     out_dir: Path,
     audio_only: bool = False,
+    sub_langs: str | None = None,
 ) -> dict:
     if is_url(source):
-        return download_url(source, out_dir, audio_only=audio_only)
+        return download_url(source, out_dir, audio_only=audio_only, sub_langs=sub_langs)
     return resolve_local(source)
 
 

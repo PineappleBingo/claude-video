@@ -56,6 +56,9 @@ OPENAI_API_KEY=
 # Allowed values: transcript | efficient | balanced | token-burner
 # Keep the value on its own line with no trailing comment.
 # WATCH_DETAIL=balanced
+# Caption languages for yt-dlp, comma-separated patterns (default en.*).
+# Korean sources: WATCH_SUB_LANGS=ko.*,en.*  ("all" is rejected)
+# WATCH_SUB_LANGS=en.*
 """
 
 

@@ -140,6 +140,7 @@ python3 "${SKILL_DIR}/scripts/watch.py" "<source>"
 ```
 
 Optional flags:
+- `--sub-langs ko.*,en.*` — caption languages to request (default `WATCH_SUB_LANGS` or `en.*`). Use for non-English sources; without it the free caption path is skipped and Whisper is needed.
 - `--detail transcript|efficient|balanced|token-burner` — fidelity/speed dial. `transcript` = no frames (transcript only, skips video download when captions exist); `efficient` = fast keyframes (cap 50); `balanced` = scene-aware frames (cap 100); `token-burner` = scene-aware, uncapped.
 - `--start T` / `--end T` — focus on a section. Accepts `SS`, `MM:SS`, or `HH:MM:SS`. When either is set, fps auto-scales denser (see "Focusing on a section" below).
 - `--timestamps T1,T2,…` — grab a frame at each of these absolute timestamps (`SS`, `MM:SS`, or `HH:MM:SS`). Use this after reading the transcript to capture deictic moments the presenter flags ("look here", "as you can see", "notice this") that visual selection alone may miss. See "Transcript-cue frames" below.
@@ -197,6 +198,7 @@ This holds for `transcript` detail too: even with no frames, produce a **summary
 Default behavior comes from `~/.config/watch/.env`:
 
 - `WATCH_DETAIL=transcript|efficient|balanced|token-burner` (default: `balanced`)
+- `WATCH_SUB_LANGS=en.*` — yt-dlp caption language patterns, comma-separated (default English-only). Set `ko.*,en.*` for Korean sources so native captions are used instead of Whisper; `all` is rejected because it fetches hundreds of auto-translated tracks. `--sub-langs` overrides per call.
 
 At `transcript` detail, captions are enough to return a report without downloading video. If captions are missing, the script downloads audio only and tries Whisper. If no transcript can be produced, it reports the limitation clearly; re-run with `--detail balanced` for frames.
 

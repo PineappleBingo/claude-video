@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 
@@ -12,6 +13,12 @@ CONFIG_FILE = CONFIG_DIR / ".env"
 DEFAULT_DETAIL = "balanced"
 
 DETAILS = {"transcript", "efficient", "balanced", "token-burner"}
+
+# yt-dlp --sub-langs pattern list. English-only by default: "all" makes yt-dlp
+# fetch hundreds of auto-translated tracks and stalls for minutes, so the
+# request must stay bounded. Override with WATCH_SUB_LANGS (env or .env), e.g.
+# "ko.*,en.*" for Korean sources — the free caption path instead of Whisper.
+DEFAULT_SUB_LANGS = "en.*"
 
 
 def read_env_file(path: Path | None = None) -> dict[str, str]:
@@ -45,6 +52,22 @@ def read_env_file(path: Path | None = None) -> dict[str, str]:
     return values
 
 
+def normalize_sub_langs(value: str | None) -> str:
+    """Validate a WATCH_SUB_LANGS value; fall back to the default when unusable.
+
+    Accepts a comma-separated list of yt-dlp language patterns ("ko.*,en.*").
+    Rejects "all" (unbounded download) and empty values.
+    """
+    if not value:
+        return DEFAULT_SUB_LANGS
+    tokens = [t.strip() for t in value.split(",") if t.strip()]
+    if not tokens or any(t.lower() == "all" for t in tokens):
+        return DEFAULT_SUB_LANGS
+    if any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9_.*-]*", t) for t in tokens):
+        return DEFAULT_SUB_LANGS
+    return ",".join(tokens)
+
+
 def get_config() -> dict[str, object]:
     file_values = read_env_file()
 
@@ -56,8 +79,13 @@ def get_config() -> dict[str, object]:
     if detail not in DETAILS:
         detail = DEFAULT_DETAIL
 
+    sub_langs = normalize_sub_langs(
+        os.environ.get("WATCH_SUB_LANGS") or file_values.get("WATCH_SUB_LANGS")
+    )
+
     return {
         "detail": detail,
+        "sub_langs": sub_langs,
         "config_file": str(CONFIG_FILE),
     }
 
